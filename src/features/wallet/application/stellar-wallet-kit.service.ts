@@ -26,6 +26,7 @@ export function getExpectedNetworkPassphrase(): Networks {
 }
 
 let initialized = false;
+let messageSigningWalletIds = new Set<string>();
 
 function ensureInitialized(selectedWalletId?: string) {
     if (initialized) {
@@ -34,17 +35,23 @@ function ensureInitialized(selectedWalletId?: string) {
     }
 
     const network = getExpectedNetworkPassphrase();
+    const modules = [
+        new FreighterModule(),
+        new LobstrModule(),
+        new AlbedoModule(),
+        new xBullModule(),
+        new RabetModule(),
+        new HanaModule(),
+    ];
+    messageSigningWalletIds = new Set(
+        modules
+            .filter((module) => typeof module.signMessage === "function")
+            .map((module) => module.productId)
+    );
     StellarWalletsKit.init({
         network,
         selectedWalletId,
-        modules: [
-            new FreighterModule(),
-            new LobstrModule(),
-            new AlbedoModule(),
-            new xBullModule(),
-            new RabetModule(),
-            new HanaModule(),
-        ],
+        modules,
     });
     initialized = true;
 }
@@ -107,6 +114,11 @@ export const stellarWalletKitService = {
     getAddress,
 
     detectNetwork,
+
+    supportsMessageSigning(walletId: string): boolean {
+        ensureInitialized();
+        return messageSigningWalletIds.has(walletId);
+    },
 
     assertExpectedNetwork,
 
